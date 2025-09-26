@@ -2,7 +2,6 @@ package models
 
 import (
 	"database/sql"
-	"fmt"
 )
 
 type Bioskop struct {
@@ -10,23 +9,6 @@ type Bioskop struct {
 	Nama   string  `json:"nama"`
 	Lokasi string  `json:"lokasi"`
 	Rating float64 `json:"rating"`
-}
-
-// membuat tabel database
-func CreateTable(db *sql.DB) error {
-	query := `
-	CREATE TABLE IF NOT EXISTS bioskop (
-		id SERIAL PRIMARY KEY,
-		nama VARCHAR(100) NOT NULL,
-		lokasi VARCHAR(100) NOT NULL,
-		rating FLOAT
-	);
-	`
-    _, err := db.Exec(query)
-	if err != nil {
-		return fmt.Errorf("gagal membuat tabel bioskop: %w", err)
-	}
-	return nil
 }
 
 func InsertData(db *sql.DB, b *Bioskop) error {
@@ -55,7 +37,8 @@ func DeleteBioskop(db *sql.DB, id int64) error {
 }
 
 func GetAllBioskop(db *sql.DB) ([]Bioskop, error) {
-	rows, err := db.Query(`SELECT id, nama, lokasi, rating FROM bioskop`)
+	query := `SELECT * FROM bioskop`
+	rows, err := db.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -71,4 +54,12 @@ func GetAllBioskop(db *sql.DB) ([]Bioskop, error) {
 	}
 
 	return bioskops, nil
+}
+
+func GetBioskopByID(db *sql.DB, id int64) (Bioskop, error) {
+	var b Bioskop
+	query := "SELECT id, nama, lokasi, rating FROM bioskop WHERE id=$1"
+	row := db.QueryRow(query, id)
+	err := row.Scan(&b.ID, &b.Nama, &b.Lokasi, &b.Rating)
+	return b, err
 }

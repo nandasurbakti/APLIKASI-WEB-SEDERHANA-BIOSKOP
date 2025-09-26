@@ -2,8 +2,7 @@ package main
 
 import (
 	"bioskop_app/config"
-	"bioskop_app/controllers"
-	"bioskop_app/models"
+	"bioskop_app/database"
 	"bioskop_app/routers"
 	"database/sql"
 	"fmt"
@@ -13,37 +12,32 @@ import (
 )
 
 func main() {
-	// Config database
-	dbConfig := config.GetDbConfig()
+
+	cfg := config.GetDbConfig()
+	
+	var (
+		DB *sql.DB
+		err error
+	)
 
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
-		"password=%s dbname=%s sslmode=disable", dbConfig.Host, dbConfig.Port, dbConfig.User, dbConfig.Password, dbConfig.DbName)
+		"password=%s dbname=%s sslmode=disable", 
+		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DbName)
 
-	db, err := sql.Open("postgres", psqlInfo)
+	DB, err = sql.Open("postgres", psqlInfo)
 	if err != nil {
 		log.Fatal("Gagal membuka koneksi database: ", err)
 	}
-	defer db.Close()
+	defer DB.Close()
 
-	err = db.Ping()
+	err = DB.Ping()
 	if err != nil {
 		log.Fatal("Gagal terhubung ke database: ", err)
 	}
-
 	fmt.Println("Berhasil terhubung ke database")
-	err = models.CreateTable(db)
-	if err != nil {
-		log.Fatal(err)
-	}
+	database.DBMigrate(DB)
 
-	// assign db ke controller global
-	controllers.DB = db
-
-	// tabel database
-	if err := models.CreateTable(db); err != nil {
-		log.Fatal("Gagal bikin tabel:", err)
-	}
-
-	r := routers.StartServer()
+	r := routers.StartServer(DB, cfg)
+	fmt.Println("Server berjalan di port 8080")
 	r.Run(":8080")
 }
